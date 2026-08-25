@@ -1,0 +1,26 @@
+{
+  "name": "@cboyke/wd",
+  "version": "0.1.0",
+  "description": "Hand a Claude Code assignment to GitHub Actions when your own quota is gone",
+  "type": "module",
+  "bin": {
+    "wd": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "prebuild": "node scripts/embed-workflow.mjs",
+    "build": "tsc -p tsconfig.json",
+    "dev": "node scripts/embed-workflow.mjs && tsx src/cli.ts",
+    "e2e": "../scripts/e2e.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
