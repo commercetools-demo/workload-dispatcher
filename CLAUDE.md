@@ -217,28 +217,50 @@ The stub therefore moves up a level: `opts.dry_run` swaps the whole action step
 for a two-line one, which still exercises clone → guard → branch → stage →
 commit → push → PR.
 
+## Verified end to end
+
+Against the live hub `commercetools-demo/workload-dispatcher`, 2026-08-25:
+
+- **A stub run** (`--stub`, zero quota) went clone → empty-clone guard → branch →
+  stage-by-name → commit → push → PR. Commit authored
+  `workload-dispatcher <wd@ct-builders.ai>` with the `Co-Authored-By: Claude`
+  trailer, job id and run URL; `README.md` the only staged path.
+- **A live run** (`--model haiku --max-turns 10`) opened a correct PR for $0.052
+  in 7 turns. `bypassPermissions` was honoured — Claude edited a file with no
+  prompting — which confirms the `settings:` disclaimer gate is doing its job.
+  The PR body was Claude's own summary, including the explicit *Assumptions*
+  section the preamble asks for, and did not reproduce the assignment.
+- **Log privacy holds on a real model call.** In a 1,056-line run log, none of
+  the assignment text, the preamble, the fence nonce, Claude's own prose, or the
+  strings `assistant`/`tool_use` appear. No artifacts were produced.
+- **The owner allowlist refuses an out-of-org target before cloning** — a
+  dispatch at `cli/cli` failed in step 1 with every later step skipped.
+- Both previously fake-only assumptions are settled: `gh api -X POST` on a 204
+  endpoint exits 0 with empty stdout, and `run-name` arrives as `display_title`.
+
+Two defects only reachable on early-failure paths were found by those runs and
+fixed: the failure issue was titled `wd ? failed — ? → ?` because the
+identifying fields had not reached `$GITHUB_ENV` yet, and `Diagnose the model
+run` fired when the model step never ran and blamed auth. Neither was reachable
+from the fake-gh suite, which is the argument for doing this at all.
+
 ## Not yet done
 
-- **No real `repository_dispatch` has ever been sent.** Everything is verified
-  against `scripts/fake-gh.sh`. Two assumptions are only checked there: that
-  `gh api -X POST` on a 204 endpoint exits 0 with empty stdout, and that
-  `display_title` carries the `run-name` for a `repository_dispatch` event
-  specifically. Send one dry run to a scratch hub before telling colleagues this
-  works.
-- **The workflow has never run.** It parses, and every claim in its comments was
-  checked against the action's source and the Claude Code binary it pins — but
-  the clone → Claude → push → PR leg has not executed once. Do a
-  `opts.dry_run` dispatch against a scratch repo first; it needs no quota.
+- **`wd install` has still never been exercised for real.** The first hub was
+  bootstrapped by pushing the workflow with git, not through `wd install`, so its
+  create-branch → Contents API write → open-PR path is covered only by the fake.
 - **`cli/` has never actually been published.** The metadata is ready
-  (`publishConfig.access: public`, MIT, `prepack` builds so a publish cannot
-  ship a stale `dist`), and `behnam777` owns the `@commercetools-demo` npm org,
-  but `npm publish` has not been run. Do a `npm publish --dry-run` first and
-  check the file list is exactly `dist/`, `README.md`, `LICENSE`,
-  `package.json`.
-- **`wd install` has only been exercised against the fake.** The real path
-  creates a branch, writes a file through the Contents API and opens a PR; only
-  the first of those is covered by anything.
-- **The owner allowlist has never been exercised against a real dispatch.** Its
-  default (`github.repository_owner`) is what keeps an org-wide `WD_GIT_TOKEN`
-  from being an org-wide capability, so it is worth a deliberate negative test:
-  dispatch at a repo outside the org and confirm step 1 refuses.
+  (`publishConfig.access: public`, MIT, `prepack` builds so a publish cannot ship
+  a stale `dist`), and `behnam777` owns the `@commercetools-demo` npm org, but
+  `npm publish` has not been run. `npm pack --dry-run` was checked: 18 files,
+  `dist/` + README + LICENSE + package.json, and the packed tarball installs and
+  runs from a scratch prefix.
+- **`WD_GIT_TOKEN` is a classic org-wide PAT.** The allowlist bounds which repos
+  it can be *used against*, but not what the raw token could do if extracted.
+  Replace it with `actions/create-github-app-token@v2` scoped to
+  `repositories: <target from the payload>` — a one-hour token for one repo,
+  minted per run — before this is handed to colleagues.
+- **`wd doctor` cannot tell whether a secret still works**, only that it is set.
+  The first hub setup burned two runs on a token that had no access to the
+  target; a `--deep` mode that dispatches a no-op probe would catch that, at the
+  cost of a run.
