@@ -273,9 +273,43 @@ jobs:
             echo "WD_GIT_TOKEN is not set on this repository."
             echo "It needs push access to the target repos this hub serves."
             exit 1; }
+
+          # A token with a trailing newline produces a malformed URL and a 403
+          # that looks exactly like a permissions problem. `gh secret set` from a
+          # prompt is clean, but a value piped in from a file usually is not.
+          case "$WD_GIT_TOKEN" in
+            *[[:space:]]*) echo "WD_GIT_TOKEN contains whitespace — re-set it with"
+                           echo "  printf '%s' \"\$TOK\" | gh secret set WD_GIT_TOKEN --repo $GITHUB_REPOSITORY"
+                           exit 1 ;;
+          esac
+
           # --no-tags: tags are noise here, and a tag push is not something this
           # job should ever be able to do by accident.
-          git clone --no-tags "https://x-access-token:${WD_GIT_TOKEN}@github.com/${WD_SLUG}.git" .
+          #
+          # The failure here is the most common one in a fresh hub, and git's own
+          # message ("Write access to repository not granted") is misleading — it
+          # is what GitHub says when the token has NO access at all, including
+          # read. Translate it into the checklist instead.
+          if ! git clone --no-tags "https://x-access-token:${WD_GIT_TOKEN}@github.com/${WD_SLUG}.git" . 2>"$RUNNER_TEMP/clone.err"; then
+            # Never cat the file raw: git echoes the remote URL, token included.
+            sed "s|${WD_GIT_TOKEN}|***|g" "$RUNNER_TEMP/clone.err" >&2
+            echo
+            echo "Could not clone $WD_SLUG with WD_GIT_TOKEN."
+            echo
+            echo "GitHub says \"Write access to repository not granted\" whenever the token has"
+            echo "no access to the repo — including no read access — so it is not telling you"
+            echo "which. Check, in this order:"
+            echo "  · fine-grained token: is $WD_SLUG inside its repository selection? A token"
+            echo "    scoped to 'selected repositories' does NOT cover repos created afterwards."
+            echo "  · fine-grained token: does the org require approval for it, and is it still"
+            echo "    pending? Org settings -> Personal access tokens."
+            echo "  · permissions: Contents = Read and write, Pull requests = Read and write."
+            echo "  · classic PAT: does it have the 'repo' scope?"
+            echo "  · has the token expired?"
+            echo
+            echo "A classic PAT with the 'repo' scope is the quickest thing that works."
+            exit 1
+          fi
 
       # ── 4 ──────────────────────────────────────────────────────────────────
       # workload-manager/CLAUDE.md: "A clone can succeed with an empty tree."
