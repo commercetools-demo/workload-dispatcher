@@ -10,7 +10,7 @@ they were built separately.
 
 ## Layout
 
-- `cli/` — `@cboyke/wd`. **Zero runtime dependencies on purpose** — colleagues
+- `cli/` — `@commercetools-demo/workload-dispatcher`. **Zero runtime dependencies on purpose** — colleagues
   install it globally and a dependency tree is a support burden. `node:util`
   `parseArgs`, built-in `fetch`, `node:child_process`, `node:readline/promises`.
 - `.github/workflows/wd-assignment.yml` — the whole worker. Must live on the
@@ -229,7 +229,12 @@ commit → push → PR.
   checked against the action's source and the Claude Code binary it pins — but
   the clone → Claude → push → PR leg has not executed once. Do a
   `opts.dry_run` dispatch against a scratch repo first; it needs no quota.
-- **`cli/` is not published to npm**; install is a clone plus `npm link`.
+- **`cli/` has never actually been published.** The metadata is ready
+  (`publishConfig.access: public`, MIT, `prepack` builds so a publish cannot
+  ship a stale `dist`), and `behnam777` owns the `@commercetools-demo` npm org,
+  but `npm publish` has not been run. Do a `npm publish --dry-run` first and
+  check the file list is exactly `dist/`, `README.md`, `LICENSE`,
+  `package.json`.
 - **`wd install` has only been exercised against the fake.** The real path
   creates a branch, writes a file through the Contents API and opens a PR; only
   the first of those is covered by anything.

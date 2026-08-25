@@ -24,7 +24,7 @@ Two pieces:
 
 | | |
 |---|---|
-| [`cli/`](cli) | `wd` — zero-dependency Node CLI that composes and dispatches |
+| [`cli/`](cli) | [`@commercetools-demo/wd`](https://www.npmjs.com/package/@commercetools-demo/wd) — zero-dependency Node CLI that composes and dispatches |
 | [`.github/workflows/wd-assignment.yml`](.github/workflows/wd-assignment.yml) | the whole worker: clone, run Claude, commit, push, PR |
 
 This is the sibling of
@@ -48,11 +48,13 @@ Keep these straight — every error message in the tool does.
 
 ## Setup
 
-Once per team, by someone with admin on the hub:
+```bash
+npm install -g @commercetools-demo/wd
+```
+
+Then once per team, by someone with admin on the hub:
 
 ```bash
-cd cli && npm install && npm run build && npm link
-
 wd init --hub commercetools-demo/workload-dispatcher
 wd install                       # opens a PR adding the workflow
 ```
@@ -77,7 +79,9 @@ serve more than one org, set a repository **variable** (not a secret):
 gh variable set WD_ALLOWED_OWNERS --repo <hub> --body "commercetools-demo,ct-builders"
 ```
 
-Then, per person: `npm link` the CLI, `wd init --hub …`, and `wd doctor`.
+Then, per person: `npm i -g @commercetools-demo/wd`, `wd init --hub …`, and
+`wd doctor`. Working on the CLI itself instead of using it? `cd cli && npm
+install && npm run build && npm link`.
 
 ## Sending
 
@@ -187,3 +191,7 @@ the size guard, run discovery, `--watch`, and every `doctor` check. It fakes
 ```bash
 cd cli && npm run build && ../scripts/e2e.sh
 ```
+
+## License
+
+MIT

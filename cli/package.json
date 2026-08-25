@@ -1,7 +1,25 @@
 {
-  "name": "@cboyke/wd",
+  "name": "@commercetools-demo/wd",
   "version": "0.1.0",
   "description": "Hand a Claude Code assignment to GitHub Actions when your own quota is gone",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "github-actions",
+    "cli",
+    "automation",
+    "repository-dispatch"
+  ],
+  "homepage": "https://github.com/commercetools-demo/workload-dispatcher#readme",
+  "bugs": {
+    "url": "https://github.com/commercetools-demo/workload-dispatcher/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/commercetools-demo/workload-dispatcher.git",
+    "directory": "cli"
+  },
+  "license": "MIT",
   "type": "module",
   "bin": {
     "wd": "dist/cli.js"
@@ -12,9 +30,13 @@
   "engines": {
     "node": ">=20"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "prebuild": "node scripts/embed-workflow.mjs",
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "dev": "node scripts/embed-workflow.mjs && tsx src/cli.ts",
     "e2e": "../scripts/e2e.sh"
   },

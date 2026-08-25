@@ -92,9 +92,12 @@ Node 20+, and `gh` already logged in.
 **1. Install the CLI.**
 
 ```bash
-git clone git@github.com:commercetools-demo/workload-dispatcher.git
-cd workload-dispatcher/cli && npm install && npm run build && npm link
+npm install -g @commercetools-demo/wd
 ```
+
+(Only if you intend to work on `wd` itself: clone
+`commercetools-demo/workload-dispatcher`, then
+`cd cli && npm install && npm run build && npm link`.)
 
 **2. Point it at the hub.** Stored `0600` in `~/.config/wd/config.json`
 (`%APPDATA%\wd\config.json` on Windows). No token is stored — `wd` uses your
