@@ -257,7 +257,7 @@ async function cmdSend(opts: Opts, positionals: string[]): Promise<void> {
 
   const payloadOpts: PayloadOpts = {
     model: str(opts.model) ?? 'sonnet',
-    max_turns: Number(str(opts['max-turns']) ?? 80),
+    max_turns: Number(str(opts['max-turns']) ?? 150),
     debug: opts.debug === true,
     // Two different "dry runs", deliberately named apart. --dry-run is
     // client-side: compose everything and dispatch nothing. --stub dispatches
