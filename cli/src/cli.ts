@@ -48,6 +48,8 @@ const HELP = `wd — hand a Claude Code assignment to GitHub Actions
       --model <name>        sonnet (default) | opus | haiku | fable | full id
       --max-turns <n>       Model-side budget (default 80)
       --draft               Open the PR as a draft
+      --stub                Dispatch, but stub out the model call. Exercises
+                            clone/branch/commit/push/PR at zero quota
       --debug               Log verbosely in CI and keep the transcript
       --watch               Follow the run to completion
       --dry-run             Print what would be sent; dispatch nothing
@@ -257,7 +259,12 @@ async function cmdSend(opts: Opts, positionals: string[]): Promise<void> {
     model: str(opts.model) ?? 'sonnet',
     max_turns: Number(str(opts['max-turns']) ?? 80),
     debug: opts.debug === true,
-    dry_run: false,
+    // Two different "dry runs", deliberately named apart. --dry-run is
+    // client-side: compose everything and dispatch nothing. --stub dispatches
+    // for real but swaps the model step for a stub, which is the only way to
+    // exercise clone -> guard -> branch -> stage -> commit -> push -> PR without
+    // spending quota. The payload field is the workflow's name for the latter.
+    dry_run: opts.stub === true,
     draft: opts.draft === true,
   };
   if (!Number.isInteger(payloadOpts.max_turns) || payloadOpts.max_turns < 1) {
@@ -413,6 +420,7 @@ const OPTIONS = {
   model: { type: 'string' },
   'max-turns': { type: 'string' },
   draft: { type: 'boolean' },
+  stub: { type: 'boolean' },
   debug: { type: 'boolean' },
   watch: { type: 'boolean' },
   'dry-run': { type: 'boolean' },

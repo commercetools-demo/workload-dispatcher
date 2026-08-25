@@ -111,18 +111,6 @@ jobs:
           if (!/^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(slug))
             fail('payload.repo must be an "owner/name" slug, not a remote URL');
 
-          // Anyone with push access to this hub can dispatch, and WD_GIT_TOKEN
-          // is org-wide. This is the check that keeps "can dispatch" from
-          // meaning "can push anywhere that token reaches". Enforced here, in
-          // the workflow, because a client-side allowlist is only ever advice —
-          // a `gh api .../dispatches` call by hand bypasses the CLI entirely.
-          const allowed = String(process.env.WD_ALLOWED_OWNERS ?? '')
-            .split(',').map((o) => o.trim().toLowerCase()).filter(Boolean);
-          const owner = slug.split('/')[0].toLowerCase();
-          if (!allowed.length) fail('WD_ALLOWED_OWNERS resolved to nothing — refusing to run unbounded');
-          if (!allowed.includes(owner))
-            fail(`this hub may only act on repos owned by ${allowed.join(', ')}, and ${slug} is not one of them`);
-
           const refOk = (s) =>
             /^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(s) &&
             !s.includes('..') && !s.includes('@{') && !s.endsWith('/') && !s.endsWith('.lock');
@@ -137,6 +125,28 @@ jobs:
 
           const submitter = String(p.submitter ?? '').replace(/[^A-Za-z0-9@._-]/g, '').slice(0, 100);
           const title = String(p.title ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 100);
+
+          // Publish who/what/where BEFORE any check that can fail for a reason
+          // other than a malformed payload. `wd` is fire-and-forget, so the
+          // failure issue is the submitter's only channel — and an issue titled
+          // "wd ? failed — ? → ?" tells them nothing about which dispatch died.
+          // Everything written here has just been format-checked above.
+          appendFileSync(process.env.GITHUB_ENV, [
+            `WD_JOB_ID=${jobId}`, `WD_SLUG=${slug}`, `WD_BRANCH=${branch}`,
+            `WD_BASE=${base}`, `WD_SUBMITTER=${submitter}`, '',
+          ].join('\n'));
+
+          // Anyone with push access to this hub can dispatch, and WD_GIT_TOKEN
+          // is org-wide. This is the check that keeps "can dispatch" from
+          // meaning "can push anywhere that token reaches". Enforced here, in
+          // the workflow, because a client-side allowlist is only ever advice —
+          // a `gh api .../dispatches` call by hand bypasses the CLI entirely.
+          const allowed = String(process.env.WD_ALLOWED_OWNERS ?? '')
+            .split(',').map((o) => o.trim().toLowerCase()).filter(Boolean);
+          const owner = slug.split('/')[0].toLowerCase();
+          if (!allowed.length) fail('WD_ALLOWED_OWNERS resolved to nothing — refusing to run unbounded');
+          if (!allowed.includes(owner))
+            fail(`this hub may only act on repos owned by ${allowed.join(', ')}, and ${slug} is not one of them`);
 
           const assignment = String(p.assignment ?? '');
           // A too-short assignment is a client bug, and finding out now is far
@@ -179,8 +189,6 @@ jobs:
           // block. That file is a log surface — only facts you are happy to see
           // in the log go here. The assignment never does.
           appendFileSync(process.env.GITHUB_ENV, [
-            `WD_JOB_ID=${jobId}`, `WD_SLUG=${slug}`, `WD_BRANCH=${branch}`,
-            `WD_BASE=${base}`, `WD_SUBMITTER=${submitter}`,
             `WD_DEBUG=${debug}`, `WD_DRY_RUN=${dryRun}`, `WD_DRAFT=${draft}`,
             `WD_MODEL=${model}`, `WD_MAX_TURNS=${maxTurns}`,
             `WD_DIR=${dir}`, `WD_META=${meta}`, '',
@@ -466,7 +474,11 @@ jobs:
       # never a tool input — and hands them to the failure report.
       - name: Diagnose the model run
         id: facts
-        if: always() && env.WD_DRY_RUN != 'true'
+        # `steps.claude.conclusion` is 'skipped' both when the model step was
+        # skipped and when the job died before reaching it. Without that guard
+        # this step fires on a failed clone and reports "no result event — most
+        # often auth", blaming a credential that was never used.
+        if: always() && env.WD_DRY_RUN != 'true' && steps.claude.conclusion != 'skipped'
         env:
           # A path emitted by the action, not payload data.
           WD_EXEC_FILE: ${{ steps.claude.outputs.execution_file }}
